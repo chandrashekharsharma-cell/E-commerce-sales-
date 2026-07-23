@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NovaCart — Retail Intelligence Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital,wght@0,400;1,400&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  :root{
+    --ink:#0B1220;
+    --panel:#121B2E;
+    --panel-raised:#182544;
+    --border:#26314A;
+    --gold:#E8A33D;
+    --jade:#2FBF9F;
+    --coral:#E5604C;
+    --periwinkle:#7C93FF;
+    --text:#EDF1F7;
+    --muted:#8993AC;
+    --font-display:'Instrument Serif', serif;
+    --font-body:'Inter', sans-serif;
+    --font-mono:'JetBrains Mono', monospace;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:radial-gradient(circle at 20% 0%, #16213b 0%, var(--ink) 45%);
+    color:var(--text);
+    font-family:var(--font-body);
+    -webkit-font-smoothing:antialiased;
+    padding-bottom:40px;
+  }
+  a{color:inherit;}
+
+  /* ---------- Ticker ---------- */
+  .ticker-wrap{
+    position:sticky; top:0; z-index:50;
+    background:#0A0F1C;
+    border-bottom:1px dashed #3A4664;
+    border-top:1px dashed #3A4664;
+    overflow:hidden;
+    white-space:nowrap;
+    padding:9px 0;
+  }
+  .ticker-track{
+    display:inline-flex;
+    width:max-content;
+    animation:ticker-scroll 70s linear infinite;
+  }
+  @keyframes ticker-scroll{ from{transform:translateX(0);} to{transform:translateX(-50%);} }
+  .ticker-item{
+    font-family:var(--font-mono);
+    font-size:12.5px;
+    color:#B9C4DE;
+    padding:0 22px;
+    border-right:1px dashed #3A4664;
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+  }
+  .ticker-item .dot{width:6px;height:6px;border-radius:50%;background:var(--jade);display:inline-block;flex:none;}
+  .ticker-item b{color:var(--gold); font-weight:600;}
+
+  /* ---------- Header ---------- */
+  .wrap{max-width:1320px; margin:0 auto; padding:0 28px;}
+  header.hero{
+    padding:38px 28px 18px;
+    display:flex; flex-wrap:wrap; justify-content:space-between; align-items:flex-end; gap:20px;
+    max-width:1320px; margin:0 auto;
+    opacity:0; animation:fadeUp .7s ease-out .05s forwards;
+  }
+  .brand-block h1{
+    font-family:var(--font-display);
+    font-style:italic;
+    font-size:44px;
+    margin:0 0 2px;
+    letter-spacing:.3px;
+    background:linear-gradient(90deg,#F3D9A4,#E8A33D 55%,#c97f22);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .brand-block p{margin:0; color:var(--muted); font-size:14.5px; max-width:520px;}
+  .brand-block p .as-of{color:#B9C4DE; font-family:var(--font-mono); font-size:12.5px;}
+  .pulse{display:inline-flex; align-items:center; gap:6px; font-family:var(--font-mono); font-size:11.5px; color:var(--jade); text-transform:uppercase; letter-spacing:.08em; margin-bottom:8px;}
+  .pulse i{width:7px;height:7px;border-radius:50%;background:var(--jade); box-shadow:0 0 0 0 rgba(47,191,159,.6); animation:pulse 1.8s infinite;}
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(47,191,159,.55);}
+    70%{box-shadow:0 0 0 8px rgba(47,191,159,0);}
+    100%{box-shadow:0 0 0 0 rgba(47,191,159,0);}
+  }
+
+  .pill-row{display:flex; flex-wrap:wrap; gap:8px;}
+  .pill{
+    font-family:var(--font-mono);
+    font-size:12.5px;
+    padding:8px 14px;
+    border-radius:100px;
+    border:1px solid var(--border);
+    background:var(--panel);
+    color:var(--muted);
+    cursor:pointer;
+    transition:all .25s ease;
+    user-select:none;
+  }
+  .pill:hover{border-color:var(--gold); color:var(--text); transform:translateY(-1px);}
+  .pill.active{background:var(--gold); border-color:var(--gold); color:#241503; font-weight:600;}
+
+  /* ---------- KPI Row ---------- */
+  .kpi-grid{
+    display:grid;
+    grid-template-columns:repeat(5, 1fr);
+    gap:16px;
+    margin:22px 0 26px;
+  }
+  @media (max-width:1050px){ .kpi-grid{grid-template-columns:repeat(2,1fr);} }
+  @media (max-width:560px){ .kpi-grid{grid-template-columns:1fr;} }
+  .kpi-card{
+    background:linear-gradient(155deg, var(--panel) 0%, #101828 100%);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:18px 20px;
+    position:relative;
+    overflow:hidden;
+    opacity:0; transform:translateY(14px);
+    animation:fadeUp .6s ease-out forwards;
+    transition:transform .25s ease, border-color .25s ease, box-shadow .25s ease;
+  }
+  .kpi-card:hover{transform:translateY(-3px); border-color:var(--gold); box-shadow:0 10px 30px -14px rgba(232,163,61,.35);}
+  .kpi-card .label{font-size:11.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;}
+  .kpi-card .value{font-family:var(--font-mono); font-size:26px; font-weight:600; color:var(--text); letter-spacing:-.5px;}
+  .kpi-card .sub{font-size:12px; color:var(--muted); margin-top:6px; font-family:var(--font-mono);}
+  .kpi-card .sub.up{color:var(--jade);}
+  .kpi-card .sub.down{color:var(--coral);}
+  .kpi-card::after{
+    content:''; position:absolute; right:-30px; top:-30px; width:110px; height:110px; border-radius:50%;
+    background:radial-gradient(circle, rgba(232,163,61,.14), transparent 70%);
+  }
+
+  /* ---------- Panels / Grid ---------- */
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:16px;
+    padding:22px 22px 14px;
+    opacity:0; transform:translateY(18px);
+    transition:opacity .6s ease-out, transform .6s ease-out;
+  }
+  .panel.in-view{opacity:1; transform:translateY(0);}
+  .panel h3{
+    font-family:var(--font-body); font-weight:700; font-size:15px; margin:0 0 2px; color:var(--text);
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .panel .panel-sub{font-size:12px; color:var(--muted); margin-bottom:14px;}
+  .tag{font-family:var(--font-mono); font-size:10.5px; padding:3px 8px; border-radius:100px; background:var(--panel-raised); color:var(--muted); border:1px solid var(--border);}
+
+  .grid-2-1{display:grid; grid-template-columns:2fr 1fr; gap:18px; margin-bottom:18px;}
+  .grid-1-1{display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:18px;}
+  @media (max-width:980px){ .grid-2-1, .grid-1-1{grid-template-columns:1fr;} }
+
+  canvas{max-height:320px;}
+
+  /* ---------- Cohort heatmap ---------- */
+  .cohort-scroll{overflow-x:auto; padding-bottom:6px;}
+  .cohort-grid{display:grid; gap:4px; font-family:var(--font-mono); font-size:11px; min-width:640px;}
+  .cohort-cell{
+    aspect-ratio:1.5/1; border-radius:5px; display:flex; align-items:center; justify-content:center;
+    color:#0B1220; font-weight:600;
+    opacity:0; transform:scale(.85);
+    animation:cellIn .45s ease-out forwards;
+  }
+  .cohort-label{color:var(--muted); display:flex; align-items:center; font-size:10.5px; padding-right:8px;}
+  .cohort-head{color:var(--muted); text-align:center; font-size:10px; padding-bottom:2px;}
+  @keyframes cellIn{ to{opacity:1; transform:scale(1);} }
+  @keyframes fadeUp{ from{opacity:0; transform:translateY(16px);} to{opacity:1; transform:translateY(0);} }
+
+  footer{
+    max-width:1320px; margin:26px auto 0; padding:20px 28px 0; border-top:1px solid var(--border);
+    display:flex; flex-wrap:wrap; justify-content:space-between; gap:14px; color:var(--muted); font-size:12px;
+  }
+  .stack-badges{display:flex; gap:8px; flex-wrap:wrap;}
+  .stack-badges span{font-family:var(--font-mono); background:var(--panel); border:1px solid var(--border); padding:4px 10px; border-radius:100px;}
+
+  @media (prefers-reduced-motion: reduce){
+    .ticker-track{animation:none;}
+    .pulse i{animation:none;}
+    *{animation-duration:.001s !important; transition-duration:.001s !important;}
+  }
+
+  ::-webkit-scrollbar{height:8px; width:8px;}
+  ::-webkit-scrollbar-thumb{background:#2b3654; border-radius:8px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+</style>
+</head>
+<body>
+
+<div class="ticker-wrap"><div class="ticker-track" id="tickerTrack"></div></div>
+
+<header class="hero wrap">
+  <div class="brand-block">
+    <div class="pulse"><i></i> LIVE ORDER FEED</div>
+    <h1>NovaCart</h1>
+    <p>Retail &amp; e-commerce performance across web, app, marketplace &amp; social channels. <span class="as-of" id="dateRangeLabel"></span></p>
+  </div>
+  <div class="pill-row" id="channelPills"></div>
+</header>
+
+<main class="wrap">
+
+  <section class="kpi-grid" id="kpiGrid"></section>
+
+  <div class="grid-2-1">
+    <div class="panel" id="panel-trend">
+      <h3>Revenue &amp; Profit Trend <span class="tag">monthly</span></h3>
+      <div class="panel-sub">Net revenue and profit across the full data history, filtered by channel above.</div>
+      <canvas id="chart-trend"></canvas>
+    </div>
+    <div class="panel" id="panel-mix">
+      <h3>Channel Mix <span class="tag">revenue share</span></h3>
+      <div class="panel-sub">Share of total revenue by sales channel.</div>
+      <canvas id="chart-mix"></canvas>
+    </div>
+  </div>
+
+  <div class="grid-1-1">
+    <div class="panel" id="panel-products">
+      <h3>Top Products <span class="tag">by revenue</span></h3>
+      <div class="panel-sub">Highest-earning SKUs for the selected channel.</div>
+      <canvas id="chart-products"></canvas>
+    </div>
+    <div class="panel" id="panel-category">
+      <h3>Category Performance <span class="tag">revenue vs profit</span></h3>
+      <div class="panel-sub">Where the margin really comes from.</div>
+      <canvas id="chart-category"></canvas>
+    </div>
+  </div>
+
+  <div class="grid-1-1">
+    <div class="panel" id="panel-rfm">
+      <h3>Customer RFM Map <span class="tag">recency · frequency · value</span></h3>
+      <div class="panel-sub">Each bubble is a customer; size = total spend. Click a segment in the legend to isolate it.</div>
+      <canvas id="chart-rfm"></canvas>
+    </div>
+    <div class="panel" id="panel-region">
+      <h3>Regional Revenue <span class="tag">by zone</span></h3>
+      <div class="panel-sub">Revenue by customer region, selected channel.</div>
+      <canvas id="chart-region"></canvas>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-cohort" style="margin-bottom:18px;">
+    <h3>Monthly Cohort Retention <span class="tag">% of cohort still buying</span></h3>
+    <div class="panel-sub">Rows = signup month. Columns = months since first purchase.</div>
+    <div class="cohort-scroll"><div class="cohort-grid" id="cohortGrid"></div></div>
+  </div>
+
+</main>
+
+<footer class="wrap">
+  <div>NovaCart Retail Analytics — synthetic data generated for portfolio purposes. Data pipeline: SQLite star schema → pandas ETL → this dashboard.</div>
+  <div class="stack-badges">
+    <span>SQL</span><span>Python / pandas</span><span>Power BI</span><span>HTML / Chart.js</span>
+  </div>
+</footer>
+
+<script>
+const DATA = {"channels": {"All": {"kpis": {"revenue": 583780774.5, "profit": 223133707.19, "margin_pct": 38.22, "orders": 25710, "customers": 3900, "aov": 22706.37, "repeat_rate_pct": 92.31, "return_rate_pct": 8.03}, "monthly_trend": [{"month": "2023-06", "revenue": 9141562.0, "profit": 3459023.2, "orders": 394}, {"month": "2023-07", "revenue": 10607685.5, "profit": 4051767.1, "orders": 463}, {"month": "2023-08", "revenue": 9291049.5, "profit": 3559240.56, "orders": 451}, {"month": "2023-09", "revenue": 10455918.5, "profit": 4015813.45, "orders": 444}, {"month": "2023-10", "revenue": 16847128.5, "profit": 6472759.85, "orders": 783}, {"month": "2023-11", "revenue": 18656120.5, "profit": 7061945.06, "orders": 805}, {"month": "2023-12", "revenue": 14566065.5, "profit": 5687396.9, "orders": 665}, {"month": "2024-01", "revenue": 11418126.0, "profit": 4324199.67, "orders": 516}, {"month": "2024-02", "revenue": 7679612.0, "profit": 2953486.5, "orders": 370}, {"month": "2024-03", "revenue": 12330491.5, "profit": 4718132.81, "orders": 514}, {"month": "2024-04", "revenue": 13172452.5, "profit": 5025223.0, "orders": 573}, {"month": "2024-05", "revenue": 12983110.0, "profit": 5008830.47, "orders": 544}, {"month": "2024-06", "revenue": 11139395.0, "profit": 4293728.44, "orders": 552}, {"month": "2024-07", "revenue": 13306518.0, "profit": 5149561.19, "orders": 617}, {"month": "2024-08", "revenue": 12108581.5, "profit": 4721601.88, "orders": 589}, {"month": "2024-09", "revenue": 14857686.0, "profit": 5599671.68, "orders": 610}, {"month": "2024-10", "revenue": 20470683.5, "profit": 7957119.09, "orders": 955}, {"month": "2024-11", "revenue": 23688002.5, "profit": 9052303.04, "orders": 1008}, {"month": "2024-12", "revenue": 16594465.0, "profit": 6388404.96, "orders": 789}, {"month": "2025-01", "revenue": 14380781.5, "profit": 5419376.32, "orders": 629}, {"month": "2025-02", "revenue": 12145669.0, "profit": 4477526.63, "orders": 498}, {"month": "2025-03", "revenue": 14949047.5, "profit": 5690048.72, "orders": 706}, {"month": "2025-04", "revenue": 14544440.5, "profit": 5666413.49, "orders": 620}, {"month": "2025-05", "revenue": 15712681.0, "profit": 6098735.62, "orders": 683}, {"month": "2025-06", "revenue": 14297423.5, "profit": 5359658.92, "orders": 678}, {"month": "2025-07", "revenue": 17653208.5, "profit": 6769253.03, "orders": 756}, {"month": "2025-08", "revenue": 17907905.0, "profit": 6812590.0, "orders": 777}, {"month": "2025-09", "revenue": 18109285.0, "profit": 6944353.53, "orders": 738}, {"month": "2025-10", "revenue": 29039517.0, "profit": 11108370.61, "orders": 1204}, {"month": "2025-11", "revenue": 26590330.0, "profit": 10125687.87, "orders": 1192}, {"month": "2025-12", "revenue": 22180300.0, "profit": 8615762.04, "orders": 983}, {"month": "2026-01", "revenue": 18514607.0, "profit": 7064412.24, "orders": 782}, {"month": "2026-02", "revenue": 12993431.0, "profit": 4784215.23, "orders": 571}, {"month": "2026-03", "revenue": 19166382.5, "profit": 7293020.73, "orders": 805}, {"month": "2026-04", "revenue": 18922009.5, "profit": 7183475.91, "orders": 821}, {"month": "2026-05", "revenue": 19368660.5, "profit": 7473398.71, "orders": 831}, {"month": "2026-06", "revenue": 17990442.0, "profit": 6747198.74, "orders": 794}], "category_performance": [{"category": "Electronics", "revenue": 254109063.5, "profit": 92175440.55, "margin_pct": 36.27}, {"category": "Furniture", "revenue": 165043272.5, "profit": 69017119.68, "margin_pct": 41.82}, {"category": "Home & Kitchen", "revenue": 49775457.5, "profit": 19221781.67, "margin_pct": 38.62}, {"category": "Sports & Fitness", "revenue": 48612921.5, "profit": 17772212.91, "margin_pct": 36.56}, {"category": "Fashion & Apparel", "revenue": 19271988.0, "profit": 7872275.66, "margin_pct": 40.85}, {"category": "Baby & Toys", "revenue": 17615601.0, "profit": 6133431.04, "margin_pct": 34.82}, {"category": "Beauty & Personal Care", "revenue": 9547011.0, "profit": 3269489.81, "margin_pct": 34.25}, {"category": "Mobile & Accessories", "revenue": 8838863.5, "profit": 3267121.5, "margin_pct": 36.96}, {"category": "Grocery & Gourmet", "revenue": 5856901.0, "profit": 2492374.87, "margin_pct": 42.55}, {"category": "Books & Stationery", "revenue": 5109695.0, "profit": 1912459.5, "margin_pct": 37.43}], "top_products": [{"name": "Amberline Premium Bluetooth Speakers", "category": "Electronics", "revenue": 58380920.0, "units": 1352}, {"name": "Brightlane Classic Sofas", "category": "Furniture", "revenue": 46597184.0, "units": 1230}, {"name": "Roamly Urban Bluetooth Speakers", "category": "Electronics", "revenue": 37362193.0, "units": 902}, {"name": "CraftHouse Comfort Smartphones", "category": "Electronics", "revenue": 25779487.5, "units": 953}, {"name": "Everstone Urban Smartphones", "category": "Electronics", "revenue": 20628055.0, "units": 356}, {"name": "CraftHouse Premium Bedding", "category": "Home & Kitchen", "revenue": 19186174.0, "units": 1996}, {"name": "CraftHouse Essential Chairs", "category": "Furniture", "revenue": 18042750.0, "units": 434}, {"name": "Meadowlace Deluxe Cameras", "category": "Electronics", "revenue": 15453664.0, "units": 331}], "region_performance": [{"region": "West", "revenue": 160613480.0}, {"region": "North", "revenue": 145739087.0}, {"region": "South", "revenue": 144934189.0}, {"region": "East", "revenue": 55645755.5}, {"region": "Central", "revenue": 54988472.0}, {"region": "Northeast", "revenue": 14877979.5}, {"region": "Unknown", "revenue": 6981811.5}]}, "Website": {"kpis": {"revenue": 266054982.0, "profit": 101810309.31, "margin_pct": 38.27, "orders": 11521, "customers": 3396, "aov": 23093.05, "repeat_rate_pct": 74.0, "return_rate_pct": 8.18}, "monthly_trend": [{"month": "2023-06", "revenue": 3935231.5, "profit": 1471395.09, "orders": 158}, {"month": "2023-07", "revenue": 5028630.0, "profit": 1949017.54, "orders": 204}, {"month": "2023-08", "revenue": 4328376.5, "profit": 1697956.26, "orders": 206}, {"month": "2023-09", "revenue": 3561378.0, "profit": 1404259.57, "orders": 175}, {"month": "2023-10", "revenue": 7423439.5, "profit": 2887361.7, "orders": 335}, {"month": "2023-11", "revenue": 8938743.0, "profit": 3380583.44, "orders": 378}, {"month": "2023-12", "revenue": 6249803.5, "profit": 2455599.92, "orders": 306}, {"month": "2024-01", "revenue": 5419683.5, "profit": 2061619.18, "orders": 235}, {"month": "2024-02", "revenue": 3171759.0, "profit": 1224474.03, "orders": 175}, {"month": "2024-03", "revenue": 5668358.0, "profit": 2158386.17, "orders": 224}, {"month": "2024-04", "revenue": 5932940.0, "profit": 2305313.78, "orders": 271}, {"month": "2024-05", "revenue": 6287323.0, "profit": 2452047.58, "orders": 263}, {"month": "2024-06", "revenue": 4731394.5, "profit": 1857469.02, "orders": 254}, {"month": "2024-07", "revenue": 6496963.5, "profit": 2482450.89, "orders": 292}, {"month": "2024-08", "revenue": 5353806.5, "profit": 2117704.61, "orders": 252}, {"month": "2024-09", "revenue": 7448063.5, "profit": 2805105.77, "orders": 280}, {"month": "2024-10", "revenue": 10465232.5, "profit": 4152135.59, "orders": 441}, {"month": "2024-11", "revenue": 9724067.5, "profit": 3685416.83, "orders": 436}, {"month": "2024-12", "revenue": 7353260.5, "profit": 2826744.32, "orders": 355}, {"month": "2025-01", "revenue": 6880257.5, "profit": 2581605.66, "orders": 282}, {"month": "2025-02", "revenue": 5359596.5, "profit": 1880733.21, "orders": 221}, {"month": "2025-03", "revenue": 6751146.5, "profit": 2583870.52, "orders": 315}, {"month": "2025-04", "revenue": 6436837.5, "profit": 2540509.22, "orders": 288}, {"month": "2025-05", "revenue": 7570781.0, "profit": 2999022.51, "orders": 298}, {"month": "2025-06", "revenue": 6295470.5, "profit": 2349343.92, "orders": 307}, {"month": "2025-07", "revenue": 8606454.0, "profit": 3363200.65, "orders": 343}, {"month": "2025-08", "revenue": 8813169.5, "profit": 3352699.91, "orders": 371}, {"month": "2025-09", "revenue": 8482640.0, "profit": 3219031.15, "orders": 330}, {"month": "2025-10", "revenue": 14370323.0, "profit": 5440421.3, "orders": 563}, {"month": "2025-11", "revenue": 11605687.5, "profit": 4401254.78, "orders": 515}, {"month": "2025-12", "revenue": 10131657.5, "profit": 3964728.47, "orders": 437}, {"month": "2026-01", "revenue": 8666944.5, "profit": 3295225.84, "orders": 364}, {"month": "2026-02", "revenue": 5959497.0, "profit": 2167817.15, "orders": 259}, {"month": "2026-03", "revenue": 8315780.5, "profit": 3220622.19, "orders": 338}, {"month": "2026-04", "revenue": 8064196.0, "profit": 2999687.43, "orders": 348}, {"month": "2026-05", "revenue": 7863988.0, "profit": 2993968.37, "orders": 351}, {"month": "2026-06", "revenue": 8362101.0, "profit": 3081525.74, "orders": 351}], "category_performance": [{"category": "Electronics", "revenue": 116383998.5, "profit": 42303057.16, "margin_pct": 36.35}, {"category": "Furniture", "revenue": 75789968.0, "profit": 31680058.49, "margin_pct": 41.8}, {"category": "Home & Kitchen", "revenue": 22422869.0, "profit": 8653152.96, "margin_pct": 38.59}, {"category": "Sports & Fitness", "revenue": 21933381.5, "profit": 8007633.56, "margin_pct": 36.51}, {"category": "Fashion & Apparel", "revenue": 8537819.0, "profit": 3511052.92, "margin_pct": 41.12}, {"category": "Baby & Toys", "revenue": 7839069.0, "profit": 2737470.66, "margin_pct": 34.92}, {"category": "Beauty & Personal Care", "revenue": 4254899.5, "profit": 1466096.55, "margin_pct": 34.46}, {"category": "Mobile & Accessories", "revenue": 3985739.0, "profit": 1473498.83, "margin_pct": 36.97}, {"category": "Grocery & Gourmet", "revenue": 2656720.0, "profit": 1133271.44, "margin_pct": 42.66}, {"category": "Books & Stationery", "revenue": 2250518.5, "profit": 845016.74, "margin_pct": 37.55}], "top_products": [{"name": "Amberline Premium Bluetooth Speakers", "category": "Electronics", "revenue": 27681660.5, "units": 639}, {"name": "Brightlane Classic Sofas", "category": "Furniture", "revenue": 20539440.0, "units": 544}, {"name": "Roamly Urban Bluetooth Speakers", "category": "Electronics", "revenue": 15791667.0, "units": 379}, {"name": "CraftHouse Comfort Smartphones", "category": "Electronics", "revenue": 12429787.5, "units": 458}, {"name": "Everstone Urban Smartphones", "category": "Electronics", "revenue": 9626845.0, "units": 166}, {"name": "CraftHouse Essential Chairs", "category": "Furniture", "revenue": 8826750.0, "units": 212}, {"name": "CraftHouse Premium Bedding", "category": "Home & Kitchen", "revenue": 8782147.5, "units": 913}, {"name": "Meadowlace Deluxe Cameras", "category": "Electronics", "revenue": 6651168.0, "units": 143}], "region_performance": [{"region": "West", "revenue": 72535661.5}, {"region": "North", "revenue": 66770652.5}, {"region": "South", "revenue": 66735057.5}, {"region": "East", "revenue": 25825623.0}, {"region": "Central", "revenue": 24684548.5}, {"region": "Northeast", "revenue": 6485694.5}, {"region": "Unknown", "revenue": 3017744.5}]}, "Mobile App": {"kpis": {"revenue": 201350293.0, "profit": 76622194.71, "margin_pct": 38.05, "orders": 9023, "customers": 3151, "aov": 22315.23, "repeat_rate_pct": 67.66, "return_rate_pct": 7.99}, "monthly_trend": [{"month": "2023-06", "revenue": 3112361.0, "profit": 1188183.26, "orders": 151}, {"month": "2023-07", "revenue": 3461120.0, "profit": 1272255.35, "orders": 152}, {"month": "2023-08", "revenue": 3585048.5, "profit": 1334030.51, "orders": 162}, {"month": "2023-09", "revenue": 4113730.0, "profit": 1564705.78, "orders": 182}, {"month": "2023-10", "revenue": 6104769.0, "profit": 2287862.32, "orders": 299}, {"month": "2023-11", "revenue": 6432192.0, "profit": 2453867.93, "orders": 265}, {"month": "2023-12", "revenue": 5002711.0, "profit": 1937919.04, "orders": 224}, {"month": "2024-01", "revenue": 3889715.5, "profit": 1495390.67, "orders": 178}, {"month": "2024-02", "revenue": 2999054.0, "profit": 1133108.46, "orders": 110}, {"month": "2024-03", "revenue": 3950323.5, "profit": 1475002.96, "orders": 183}, {"month": "2024-04", "revenue": 4908806.5, "profit": 1841025.93, "orders": 186}, {"month": "2024-05", "revenue": 4727233.0, "profit": 1812287.86, "orders": 199}, {"month": "2024-06", "revenue": 4312805.0, "profit": 1614039.34, "orders": 193}, {"month": "2024-07", "revenue": 4250385.0, "profit": 1622330.6, "orders": 205}, {"month": "2024-08", "revenue": 4170671.0, "profit": 1587584.71, "orders": 216}, {"month": "2024-09", "revenue": 4898971.5, "profit": 1858304.46, "orders": 206}, {"month": "2024-10", "revenue": 6678632.5, "profit": 2518289.91, "orders": 338}, {"month": "2024-11", "revenue": 8092076.0, "profit": 3138786.42, "orders": 357}, {"month": "2024-12", "revenue": 6062463.0, "profit": 2353432.01, "orders": 288}, {"month": "2025-01", "revenue": 4773096.0, "profit": 1783842.25, "orders": 232}, {"month": "2025-02", "revenue": 3978746.0, "profit": 1476728.49, "orders": 171}, {"month": "2025-03", "revenue": 5490169.5, "profit": 2075866.31, "orders": 249}, {"month": "2025-04", "revenue": 5213930.5, "profit": 2005415.29, "orders": 207}, {"month": "2025-05", "revenue": 4750068.5, "profit": 1771004.18, "orders": 249}, {"month": "2025-06", "revenue": 4837058.0, "profit": 1794415.89, "orders": 226}, {"month": "2025-07", "revenue": 4874721.0, "profit": 1873262.98, "orders": 255}, {"month": "2025-08", "revenue": 5620532.0, "profit": 2174013.01, "orders": 263}, {"month": "2025-09", "revenue": 6759404.5, "profit": 2600298.37, "orders": 272}, {"month": "2025-10", "revenue": 9609418.0, "profit": 3735372.05, "orders": 424}, {"month": "2025-11", "revenue": 9359014.0, "profit": 3578617.11, "orders": 422}, {"month": "2025-12", "revenue": 8016753.0, "profit": 3103610.72, "orders": 344}, {"month": "2026-01", "revenue": 5961664.0, "profit": 2264276.42, "orders": 255}, {"month": "2026-02", "revenue": 5013687.0, "profit": 1836337.27, "orders": 202}, {"month": "2026-03", "revenue": 6552992.0, "profit": 2473578.05, "orders": 291}, {"month": "2026-04", "revenue": 6642581.0, "profit": 2546894.84, "orders": 290}, {"month": "2026-05", "revenue": 7596852.0, "profit": 2913181.66, "orders": 309}, {"month": "2026-06", "revenue": 5546538.0, "profit": 2127072.3, "orders": 268}], "category_performance": [{"category": "Electronics", "revenue": 88173958.0, "profit": 31785912.2, "margin_pct": 36.05}, {"category": "Furniture", "revenue": 55470846.0, "profit": 23202882.15, "margin_pct": 41.83}, {"category": "Sports & Fitness", "revenue": 17309822.0, "profit": 6333337.7, "margin_pct": 36.59}, {"category": "Home & Kitchen", "revenue": 17151815.0, "profit": 6616029.45, "margin_pct": 38.57}, {"category": "Fashion & Apparel", "revenue": 6697823.0, "profit": 2704101.61, "margin_pct": 40.37}, {"category": "Baby & Toys", "revenue": 6168303.0, "profit": 2120443.48, "margin_pct": 34.38}, {"category": "Beauty & Personal Care", "revenue": 3377445.0, "profit": 1151205.76, "margin_pct": 34.09}, {"category": "Mobile & Accessories", "revenue": 3046604.5, "profit": 1125688.21, "margin_pct": 36.95}, {"category": "Grocery & Gourmet", "revenue": 2102845.0, "profit": 894017.18, "margin_pct": 42.51}, {"category": "Books & Stationery", "revenue": 1850831.5, "profit": 688576.97, "margin_pct": 37.2}], "top_products": [{"name": "Amberline Premium Bluetooth Speakers", "category": "Electronics", "revenue": 19436059.5, "units": 452}, {"name": "Brightlane Classic Sofas", "category": "Furniture", "revenue": 16384264.0, "units": 431}, {"name": "Roamly Urban Bluetooth Speakers", "category": "Electronics", "revenue": 14504242.0, "units": 353}, {"name": "CraftHouse Comfort Smartphones", "category": "Electronics", "revenue": 9026550.0, "units": 337}, {"name": "CraftHouse Premium Bedding", "category": "Home & Kitchen", "revenue": 6559726.5, "units": 686}, {"name": "Everstone Urban Smartphones", "category": "Electronics", "revenue": 6425235.0, "units": 110}, {"name": "Meadowlace Deluxe Cameras", "category": "Electronics", "revenue": 6158208.0, "units": 132}, {"name": "CraftHouse Essential Chairs", "category": "Furniture", "revenue": 5987250.0, "units": 143}], "region_performance": [{"region": "West", "revenue": 56022310.5}, {"region": "South", "revenue": 49347171.0}, {"region": "North", "revenue": 49063863.0}, {"region": "East", "revenue": 19960835.5}, {"region": "Central", "revenue": 19437048.5}, {"region": "Northeast", "revenue": 5433585.5}, {"region": "Unknown", "revenue": 2085479.0}]}, "Marketplace": {"kpis": {"revenue": 89435211.5, "profit": 34389274.62, "margin_pct": 38.45, "orders": 3913, "customers": 2186, "aov": 22855.92, "repeat_rate_pct": 44.14, "return_rate_pct": 7.7}, "monthly_trend": [{"month": "2023-06", "revenue": 1683969.0, "profit": 649482.29, "orders": 68}, {"month": "2023-07", "revenue": 1498590.5, "profit": 601446.39, "orders": 69}, {"month": "2023-08", "revenue": 1168663.5, "profit": 448200.36, "orders": 60}, {"month": "2023-09", "revenue": 1849512.5, "profit": 710990.66, "orders": 61}, {"month": "2023-10", "revenue": 2581112.0, "profit": 1017183.03, "orders": 114}, {"month": "2023-11", "revenue": 2845603.0, "profit": 1057890.23, "orders": 132}, {"month": "2023-12", "revenue": 2827529.0, "profit": 1107478.46, "orders": 113}, {"month": "2024-01", "revenue": 1791407.0, "profit": 658996.7, "orders": 79}, {"month": "2024-02", "revenue": 1025996.5, "profit": 393317.59, "orders": 63}, {"month": "2024-03", "revenue": 2016713.5, "profit": 795162.24, "orders": 80}, {"month": "2024-04", "revenue": 2000629.5, "profit": 758614.82, "orders": 90}, {"month": "2024-05", "revenue": 1830260.0, "profit": 691462.45, "orders": 66}, {"month": "2024-06", "revenue": 1440203.0, "profit": 583828.43, "orders": 76}, {"month": "2024-07", "revenue": 1950884.5, "profit": 814036.73, "orders": 94}, {"month": "2024-08", "revenue": 2038289.0, "profit": 789953.11, "orders": 95}, {"month": "2024-09", "revenue": 2014723.0, "profit": 755881.64, "orders": 96}, {"month": "2024-10", "revenue": 2740275.0, "profit": 1058331.38, "orders": 140}, {"month": "2024-11", "revenue": 4672880.5, "profit": 1762961.38, "orders": 161}, {"month": "2024-12", "revenue": 2356709.5, "profit": 873297.03, "orders": 104}, {"month": "2025-01", "revenue": 1717501.5, "profit": 647487.18, "orders": 88}, {"month": "2025-02", "revenue": 2170080.0, "profit": 861345.76, "orders": 85}, {"month": "2025-03", "revenue": 1632096.5, "profit": 605929.09, "orders": 106}, {"month": "2025-04", "revenue": 2363318.5, "profit": 918860.53, "orders": 102}, {"month": "2025-05", "revenue": 2743756.0, "profit": 1072732.24, "orders": 102}, {"month": "2025-06", "revenue": 2602631.0, "profit": 1007975.07, "orders": 113}, {"month": "2025-07", "revenue": 3547560.5, "profit": 1321900.66, "orders": 128}, {"month": "2025-08", "revenue": 2768286.0, "profit": 1011243.99, "orders": 112}, {"month": "2025-09", "revenue": 2185258.5, "profit": 881296.14, "orders": 96}, {"month": "2025-10", "revenue": 3525572.5, "profit": 1310193.2, "orders": 161}, {"month": "2025-11", "revenue": 4307646.5, "profit": 1625234.6, "orders": 185}, {"month": "2025-12", "revenue": 2541076.5, "profit": 987709.32, "orders": 140}, {"month": "2026-01", "revenue": 2953144.5, "profit": 1162600.02, "orders": 126}, {"month": "2026-02", "revenue": 1351546.0, "profit": 526779.83, "orders": 80}, {"month": "2026-03", "revenue": 3439911.5, "profit": 1279686.91, "orders": 132}, {"month": "2026-04", "revenue": 3042136.5, "profit": 1187311.19, "orders": 128}, {"month": "2026-05", "revenue": 3200657.0, "profit": 1308624.06, "orders": 134}, {"month": "2026-06", "revenue": 3009081.5, "profit": 1143849.91, "orders": 134}], "category_performance": [{"category": "Electronics", "revenue": 38074122.5, "profit": 13893122.99, "margin_pct": 36.49}, {"category": "Furniture", "revenue": 26334205.0, "profit": 11032129.83, "margin_pct": 41.89}, {"category": "Home & Kitchen", "revenue": 7662753.0, "profit": 2971993.05, "margin_pct": 38.78}, {"category": "Sports & Fitness", "revenue": 7230574.5, "profit": 2664934.89, "margin_pct": 36.86}, {"category": "Fashion & Apparel", "revenue": 3165889.5, "profit": 1300450.97, "margin_pct": 41.08}, {"category": "Baby & Toys", "revenue": 2579857.5, "profit": 898963.29, "margin_pct": 34.85}, {"category": "Beauty & Personal Care", "revenue": 1425799.5, "profit": 481873.78, "margin_pct": 33.8}, {"category": "Mobile & Accessories", "revenue": 1353329.5, "profit": 501322.33, "margin_pct": 37.04}, {"category": "Grocery & Gourmet", "revenue": 832050.5, "profit": 351218.22, "margin_pct": 42.21}, {"category": "Books & Stationery", "revenue": 776630.0, "profit": 293265.27, "margin_pct": 37.76}], "top_products": [{"name": "Amberline Premium Bluetooth Speakers", "category": "Electronics", "revenue": 8630427.0, "units": 200}, {"name": "Brightlane Classic Sofas", "category": "Furniture", "revenue": 7909432.0, "units": 209}, {"name": "Roamly Urban Bluetooth Speakers", "category": "Electronics", "revenue": 5523613.0, "units": 133}, {"name": "CraftHouse Comfort Smartphones", "category": "Electronics", "revenue": 3599212.5, "units": 132}, {"name": "Everstone Urban Smartphones", "category": "Electronics", "revenue": 3541270.0, "units": 62}, {"name": "CraftHouse Premium Bedding", "category": "Home & Kitchen", "revenue": 2906083.0, "units": 300}, {"name": "Meadowlace Urban Headphones", "category": "Electronics", "revenue": 2527048.5, "units": 45}, {"name": "CraftHouse Essential Chairs", "category": "Furniture", "revenue": 2340000.0, "units": 57}], "region_performance": [{"region": "West", "revenue": 24843107.0}, {"region": "North", "revenue": 23116562.5}, {"region": "South", "revenue": 21911412.0}, {"region": "Central", "revenue": 8823569.5}, {"region": "East", "revenue": 7380117.0}, {"region": "Northeast", "revenue": 1948411.0}, {"region": "Unknown", "revenue": 1412032.5}]}, "Social Commerce": {"kpis": {"revenue": 26940288.0, "profit": 10311928.55, "margin_pct": 38.28, "orders": 1253, "customers": 997, "aov": 21500.63, "repeat_rate_pct": 20.66, "return_rate_pct": 7.96}, "monthly_trend": [{"month": "2023-06", "revenue": 410000.5, "profit": 149962.56, "orders": 17}, {"month": "2023-07", "revenue": 619345.0, "profit": 229047.82, "orders": 38}, {"month": "2023-08", "revenue": 208961.0, "profit": 79053.43, "orders": 23}, {"month": "2023-09", "revenue": 931298.0, "profit": 335857.44, "orders": 26}, {"month": "2023-10", "revenue": 737808.0, "profit": 280352.8, "orders": 35}, {"month": "2023-11", "revenue": 439582.5, "profit": 169603.46, "orders": 30}, {"month": "2023-12", "revenue": 486022.0, "profit": 186399.48, "orders": 22}, {"month": "2024-01", "revenue": 317320.0, "profit": 108193.12, "orders": 24}, {"month": "2024-02", "revenue": 482802.5, "profit": 202586.42, "orders": 22}, {"month": "2024-03", "revenue": 695096.5, "profit": 289581.44, "orders": 27}, {"month": "2024-04", "revenue": 330076.5, "profit": 120268.47, "orders": 26}, {"month": "2024-05", "revenue": 138294.0, "profit": 53032.58, "orders": 16}, {"month": "2024-06", "revenue": 654992.5, "profit": 238391.65, "orders": 29}, {"month": "2024-07", "revenue": 608285.0, "profit": 230742.97, "orders": 26}, {"month": "2024-08", "revenue": 545815.0, "profit": 226359.45, "orders": 26}, {"month": "2024-09", "revenue": 495928.0, "profit": 180379.81, "orders": 28}, {"month": "2024-10", "revenue": 586543.5, "profit": 228362.21, "orders": 36}, {"month": "2024-11", "revenue": 1198978.5, "profit": 465138.41, "orders": 54}, {"month": "2024-12", "revenue": 822032.0, "profit": 334931.6, "orders": 42}, {"month": "2025-01", "revenue": 1009926.5, "profit": 406441.23, "orders": 27}, {"month": "2025-02", "revenue": 637246.5, "profit": 258719.17, "orders": 21}, {"month": "2025-03", "revenue": 1075635.0, "profit": 424382.8, "orders": 36}, {"month": "2025-04", "revenue": 530354.0, "profit": 201628.45, "orders": 23}, {"month": "2025-05", "revenue": 648075.5, "profit": 255976.69, "orders": 34}, {"month": "2025-06", "revenue": 562264.0, "profit": 207924.04, "orders": 32}, {"month": "2025-07", "revenue": 624473.0, "profit": 210888.74, "orders": 30}, {"month": "2025-08", "revenue": 705917.5, "profit": 274633.09, "orders": 31}, {"month": "2025-09", "revenue": 681982.0, "profit": 243727.87, "orders": 40}, {"month": "2025-10", "revenue": 1534203.5, "profit": 622384.06, "orders": 56}, {"month": "2025-11", "revenue": 1317982.0, "profit": 520581.38, "orders": 70}, {"month": "2025-12", "revenue": 1490813.0, "profit": 559713.53, "orders": 62}, {"month": "2026-01", "revenue": 932854.0, "profit": 342309.96, "orders": 37}, {"month": "2026-02", "revenue": 668701.0, "profit": 253280.98, "orders": 30}, {"month": "2026-03", "revenue": 857698.5, "profit": 319133.58, "orders": 44}, {"month": "2026-04", "revenue": 1173096.0, "profit": 449582.45, "orders": 55}, {"month": "2026-05", "revenue": 707163.5, "profit": 257624.62, "orders": 37}, {"month": "2026-06", "revenue": 1072721.5, "profit": 394750.79, "orders": 41}], "category_performance": [{"category": "Electronics", "revenue": 11476984.5, "profit": 4193348.2, "margin_pct": 36.54}, {"category": "Furniture", "revenue": 7448253.5, "profit": 3102049.21, "margin_pct": 41.65}, {"category": "Home & Kitchen", "revenue": 2538020.5, "profit": 980606.21, "margin_pct": 38.64}, {"category": "Sports & Fitness", "revenue": 2139143.5, "profit": 766306.76, "margin_pct": 35.82}, {"category": "Baby & Toys", "revenue": 1028371.5, "profit": 376553.61, "margin_pct": 36.62}, {"category": "Fashion & Apparel", "revenue": 870456.5, "profit": 356670.16, "margin_pct": 40.98}, {"category": "Beauty & Personal Care", "revenue": 488867.0, "profit": 170313.72, "margin_pct": 34.84}, {"category": "Mobile & Accessories", "revenue": 453190.5, "profit": 166612.13, "margin_pct": 36.76}, {"category": "Grocery & Gourmet", "revenue": 265285.5, "profit": 113868.03, "margin_pct": 42.92}, {"category": "Books & Stationery", "revenue": 231715.0, "profit": 85600.52, "margin_pct": 36.94}], "top_products": [{"name": "Amberline Premium Bluetooth Speakers", "category": "Electronics", "revenue": 2632773.0, "units": 61}, {"name": "Brightlane Classic Sofas", "category": "Furniture", "revenue": 1764048.0, "units": 46}, {"name": "Roamly Urban Bluetooth Speakers", "category": "Electronics", "revenue": 1542671.0, "units": 37}, {"name": "Everstone Urban Smartphones", "category": "Electronics", "revenue": 1034705.0, "units": 18}, {"name": "CraftHouse Premium Bedding", "category": "Home & Kitchen", "revenue": 938217.0, "units": 97}, {"name": "CraftHouse Essential Chairs", "category": "Furniture", "revenue": 888750.0, "units": 22}, {"name": "Meadowlace Deluxe Cameras", "category": "Electronics", "revenue": 743232.0, "units": 16}, {"name": "CraftHouse Comfort Smartphones", "category": "Electronics", "revenue": 723937.5, "units": 26}], "region_performance": [{"region": "West", "revenue": 7212401.0}, {"region": "South", "revenue": 6940548.5}, {"region": "North", "revenue": 6788009.0}, {"region": "East", "revenue": 2479180.0}, {"region": "Central", "revenue": 2043305.5}, {"region": "Northeast", "revenue": 1010288.5}, {"region": "Unknown", "revenue": 466555.5}]}}, "channel_mix": [{"channel": "Website", "revenue": 266054982.0, "share_pct": 45.57}, {"channel": "Mobile App", "revenue": 201350293.0, "share_pct": 34.49}, {"channel": "Marketplace", "revenue": 89435211.5, "share_pct": 15.32}, {"channel": "Social Commerce", "revenue": 26940288.0, "share_pct": 4.61}], "rfm_segments": [{"segment": "At Risk", "count": 166, "avg_monetary": 69128.13}, {"segment": "Champions", "count": 1105, "avg_monetary": 304642.41}, {"segment": "Loyal Customers", "count": 445, "avg_monetary": 215243.91}, {"segment": "Needs Attention", "count": 1573, "avg_monetary": 59314.72}, {"segment": "New / Promising", "count": 611, "avg_monetary": 76252.13}], "rfm_scatter": [{"recency": 144, "frequency": 6, "monetary": 82605.0, "segment": "At Risk"}, {"recency": 164, "frequency": 5, "monetary": 100435.5, "segment": "At Risk"}, {"recency": 143, "frequency": 7, "monetary": 85585.5, "segment": "At Risk"}, {"recency": 205, "frequency": 5, "monetary": 37930.0, "segment": "At Risk"}, {"recency": 206, "frequency": 9, "monetary": 73414.0, "segment": "At Risk"}, {"recency": 126, "frequency": 6, "monetary": 69643.5, "segment": "At Risk"}, {"recency": 256, "frequency": 6, "monetary": 55700.0, "segment": "At Risk"}, {"recency": 221, "frequency": 7, "monetary": 77634.0, "segment": "At Risk"}, {"recency": 619, "frequency": 5, "monetary": 92744.5, "segment": "At Risk"}, {"recency": 176, "frequency": 7, "monetary": 81429.0, "segment": "At Risk"}, {"recency": 432, "frequency": 6, "monetary": 91157.5, "segment": "At Risk"}, {"recency": 465, "frequency": 5, "monetary": 35267.0, "segment": "At Risk"}, {"recency": 161, "frequency": 5, "monetary": 73034.5, "segment": "At Risk"}, {"recency": 351, "frequency": 6, "monetary": 99489.5, "segment": "At Risk"}, {"recency": 198, "frequency": 5, "monetary": 97682.0, "segment": "At Risk"}, {"recency": 173, "frequency": 5, "monetary": 42564.5, "segment": "At Risk"}, {"recency": 364, "frequency": 6, "monetary": 65313.0, "segment": "At Risk"}, {"recency": 142, "frequency": 5, "monetary": 53354.0, "segment": "At Risk"}, {"recency": 186, "frequency": 5, "monetary": 90729.0, "segment": "At Risk"}, {"recency": 303, "frequency": 6, "monetary": 96169.5, "segment": "At Risk"}, {"recency": 337, "frequency": 5, "monetary": 55906.0, "segment": "At Risk"}, {"recency": 126, "frequency": 6, "monetary": 73006.0, "segment": "At Risk"}, {"recency": 585, "frequency": 5, "monetary": 38631.0, "segment": "At Risk"}, {"recency": 178, "frequency": 12, "monetary": 92597.0, "segment": "At Risk"}, {"recency": 184, "frequency": 6, "monetary": 78888.0, "segment": "At Risk"}, {"recency": 236, "frequency": 7, "monetary": 46986.5, "segment": "At Risk"}, {"recency": 130, "frequency": 7, "monetary": 60179.0, "segment": "At Risk"}, {"recency": 371, "frequency": 6, "monetary": 96951.5, "segment": "At Risk"}, {"recency": 289, "frequency": 5, "monetary": 97681.5, "segment": "At Risk"}, {"recency": 267, "frequency": 6, "monetary": 16227.5, "segment": "At Risk"}, {"recency": 178, "frequency": 7, "monetary": 82720.5, "segment": "At Risk"}, {"recency": 219, "frequency": 6, "monetary": 38764.0, "segment": "At Risk"}, {"recency": 185, "frequency": 5, "monetary": 95111.0, "segment": "At Risk"}, {"recency": 185, "frequency": 5, "monetary": 51444.5, "segment": "At Risk"}, {"recency": 236, "frequency": 5, "monetary": 97022.5, "segment": "At Risk"}, {"recency": 282, "frequency": 5, "monetary": 53825.5, "segment": "At Risk"}, {"recency": 201, "frequency": 6, "monetary": 84002.0, "segment": "At Risk"}, {"recency": 184, "frequency": 5, "monetary": 57814.5, "segment": "At Risk"}, {"recency": 187, "frequency": 5, "monetary": 64828.5, "segment": "At Risk"}, {"recency": 130, "frequency": 5, "monetary": 87493.0, "segment": "At Risk"}, {"recency": 77, "frequency": 7, "monetary": 138144.5, "segment": "Champions"}, {"recency": 111, "frequency": 9, "monetary": 140691.5, "segment": "Champions"}, {"recency": 125, "frequency": 6, "monetary": 149805.0, "segment": "Champions"}, {"recency": 10, "frequency": 14, "monetary": 314885.5, "segment": "Champions"}, {"recency": 54, "frequency": 14, "monetary": 313572.5, "segment": "Champions"}, {"recency": 63, "frequency": 11, "monetary": 362853.5, "segment": "Champions"}, {"recency": 9, "frequency": 6, "monetary": 119201.5, "segment": "Champions"}, {"recency": 51, "frequency": 29, "monetary": 539007.0, "segment": "Champions"}, {"recency": 116, "frequency": 17, "monetary": 566619.5, "segment": "Champions"}, {"recency": 16, "frequency": 13, "monetary": 378838.0, "segment": "Champions"}, {"recency": 19, "frequency": 16, "monetary": 209778.5, "segment": "Champions"}, {"recency": 27, "frequency": 18, "monetary": 576124.0, "segment": "Champions"}, {"recency": 27, "frequency": 9, "monetary": 247039.0, "segment": "Champions"}, {"recency": 90, "frequency": 8, "monetary": 483990.0, "segment": "Champions"}, {"recency": 6, "frequency": 14, "monetary": 678389.0, "segment": "Champions"}, {"recency": 19, "frequency": 8, "monetary": 209777.0, "segment": "Champions"}, {"recency": 86, "frequency": 11, "monetary": 320851.5, "segment": "Champions"}, {"recency": 23, "frequency": 8, "monetary": 159034.5, "segment": "Champions"}, {"recency": 42, "frequency": 13, "monetary": 264490.5, "segment": "Champions"}, {"recency": 65, "frequency": 14, "monetary": 488497.5, "segment": "Champions"}, {"recency": 45, "frequency": 33, "monetary": 864140.5, "segment": "Champions"}, {"recency": 52, "frequency": 10, "monetary": 161773.0, "segment": "Champions"}, {"recency": 2, "frequency": 21, "monetary": 404102.0, "segment": "Champions"}, {"recency": 85, "frequency": 7, "monetary": 144194.5, "segment": "Champions"}, {"recency": 69, "frequency": 7, "monetary": 326487.5, "segment": "Champions"}, {"recency": 43, "frequency": 16, "monetary": 499774.5, "segment": "Champions"}, {"recency": 42, "frequency": 12, "monetary": 411154.0, "segment": "Champions"}, {"recency": 61, "frequency": 17, "monetary": 434627.0, "segment": "Champions"}, {"recency": 23, "frequency": 29, "monetary": 518461.0, "segment": "Champions"}, {"recency": 53, "frequency": 20, "monetary": 491241.0, "segment": "Champions"}, {"recency": 19, "frequency": 11, "monetary": 234162.0, "segment": "Champions"}, {"recency": 55, "frequency": 15, "monetary": 189070.0, "segment": "Champions"}, {"recency": 5, "frequency": 13, "monetary": 233502.0, "segment": "Champions"}, {"recency": 14, "frequency": 9, "monetary": 237377.0, "segment": "Champions"}, {"recency": 3, "frequency": 17, "monetary": 481121.5, "segment": "Champions"}, {"recency": 57, "frequency": 6, "monetary": 156892.0, "segment": "Champions"}, {"recency": 21, "frequency": 18, "monetary": 328986.5, "segment": "Champions"}, {"recency": 114, "frequency": 8, "monetary": 415943.0, "segment": "Champions"}, {"recency": 46, "frequency": 16, "monetary": 346800.5, "segment": "Champions"}, {"recency": 45, "frequency": 7, "monetary": 326190.0, "segment": "Champions"}, {"recency": 200, "frequency": 6, "monetary": 127949.5, "segment": "Loyal Customers"}, {"recency": 208, "frequency": 5, "monetary": 230669.0, "segment": "Loyal Customers"}, {"recency": 179, "frequency": 6, "monetary": 105841.5, "segment": "Loyal Customers"}, {"recency": 255, "frequency": 7, "monetary": 242059.5, "segment": "Loyal Customers"}, {"recency": 158, "frequency": 7, "monetary": 126591.5, "segment": "Loyal Customers"}, {"recency": 130, "frequency": 9, "monetary": 278876.5, "segment": "Loyal Customers"}, {"recency": 182, "frequency": 5, "monetary": 266673.5, "segment": "Loyal Customers"}, {"recency": 150, "frequency": 14, "monetary": 163921.0, "segment": "Loyal Customers"}, {"recency": 388, "frequency": 7, "monetary": 158067.5, "segment": "Loyal Customers"}, {"recency": 151, "frequency": 6, "monetary": 368988.5, "segment": "Loyal Customers"}, {"recency": 150, "frequency": 10, "monetary": 396442.0, "segment": "Loyal Customers"}, {"recency": 319, "frequency": 8, "monetary": 139749.0, "segment": "Loyal Customers"}, {"recency": 269, "frequency": 8, "monetary": 138473.5, "segment": "Loyal Customers"}, {"recency": 210, "frequency": 8, "monetary": 277495.0, "segment": "Loyal Customers"}, {"recency": 136, "frequency": 7, "monetary": 288927.0, "segment": "Loyal Customers"}, {"recency": 253, "frequency": 7, "monetary": 190459.5, "segment": "Loyal Customers"}, {"recency": 138, "frequency": 18, "monetary": 472535.5, "segment": "Loyal Customers"}, {"recency": 214, "frequency": 11, "monetary": 408890.5, "segment": "Loyal Customers"}, {"recency": 187, "frequency": 6, "monetary": 122660.5, "segment": "Loyal Customers"}, {"recency": 195, "frequency": 6, "monetary": 190089.0, "segment": "Loyal Customers"}, {"recency": 284, "frequency": 7, "monetary": 196407.0, "segment": "Loyal Customers"}, {"recency": 194, "frequency": 7, "monetary": 154193.0, "segment": "Loyal Customers"}, {"recency": 262, "frequency": 8, "monetary": 163157.5, "segment": "Loyal Customers"}, {"recency": 287, "frequency": 7, "monetary": 135108.0, "segment": "Loyal Customers"}, {"recency": 236, "frequency": 5, "monetary": 188348.0, "segment": "Loyal Customers"}, {"recency": 167, "frequency": 7, "monetary": 217569.0, "segment": "Loyal Customers"}, {"recency": 186, "frequency": 6, "monetary": 562825.0, "segment": "Loyal Customers"}, {"recency": 147, "frequency": 7, "monetary": 217598.5, "segment": "Loyal Customers"}, {"recency": 407, "frequency": 6, "monetary": 131710.5, "segment": "Loyal Customers"}, {"recency": 185, "frequency": 8, "monetary": 177801.5, "segment": "Loyal Customers"}, {"recency": 204, "frequency": 6, "monetary": 172524.0, "segment": "Loyal Customers"}, {"recency": 310, "frequency": 10, "monetary": 169897.0, "segment": "Loyal Customers"}, {"recency": 344, "frequency": 8, "monetary": 236561.0, "segment": "Loyal Customers"}, {"recency": 126, "frequency": 8, "monetary": 245792.0, "segment": "Loyal Customers"}, {"recency": 189, "frequency": 7, "monetary": 110543.5, "segment": "Loyal Customers"}, {"recency": 232, "frequency": 6, "monetary": 169869.0, "segment": "Loyal Customers"}, {"recency": 434, "frequency": 7, "monetary": 332473.0, "segment": "Loyal Customers"}, {"recency": 290, "frequency": 5, "monetary": 121088.0, "segment": "Loyal Customers"}, {"recency": 197, "frequency": 7, "monetary": 229610.0, "segment": "Loyal Customers"}, {"recency": 151, "frequency": 11, "monetary": 422273.0, "segment": "Loyal Customers"}, {"recency": 755, "frequency": 1, "monetary": 5501.0, "segment": "Needs Attention"}, {"recency": 203, "frequency": 2, "monetary": 4460.0, "segment": "Needs Attention"}, {"recency": 227, "frequency": 5, "monetary": 193103.0, "segment": "Needs Attention"}, {"recency": 326, "frequency": 4, "monetary": 47490.0, "segment": "Needs Attention"}, {"recency": 43, "frequency": 5, "monetary": 63670.0, "segment": "Needs Attention"}, {"recency": 156, "frequency": 3, "monetary": 37124.0, "segment": "Needs Attention"}, {"recency": 413, "frequency": 4, "monetary": 75780.0, "segment": "Needs Attention"}, {"recency": 535, "frequency": 1, "monetary": 3526.0, "segment": "Needs Attention"}, {"recency": 254, "frequency": 4, "monetary": 66607.0, "segment": "Needs Attention"}, {"recency": 692, "frequency": 1, "monetary": 86007.5, "segment": "Needs Attention"}, {"recency": 778, "frequency": 1, "monetary": 55114.0, "segment": "Needs Attention"}, {"recency": 52, "frequency": 9, "monetary": 97748.0, "segment": "Needs Attention"}, {"recency": 152, "frequency": 3, "monetary": 20427.0, "segment": "Needs Attention"}, {"recency": 234, "frequency": 2, "monetary": 29760.0, "segment": "Needs Attention"}, {"recency": 21, "frequency": 7, "monetary": 45454.0, "segment": "Needs Attention"}, {"recency": 91, "frequency": 6, "monetary": 35660.5, "segment": "Needs Attention"}, {"recency": 277, "frequency": 3, "monetary": 35435.5, "segment": "Needs Attention"}, {"recency": 188, "frequency": 2, "monetary": 75214.5, "segment": "Needs Attention"}, {"recency": 245, "frequency": 2, "monetary": 207266.0, "segment": "Needs Attention"}, {"recency": 631, "frequency": 3, "monetary": 8804.0, "segment": "Needs Attention"}, {"recency": 262, "frequency": 2, "monetary": 2645.0, "segment": "Needs Attention"}, {"recency": 183, "frequency": 3, "monetary": 8965.0, "segment": "Needs Attention"}, {"recency": 423, "frequency": 1, "monetary": 48031.5, "segment": "Needs Attention"}, {"recency": 77, "frequency": 6, "monetary": 74733.0, "segment": "Needs Attention"}, {"recency": 191, "frequency": 4, "monetary": 45717.5, "segment": "Needs Attention"}, {"recency": 222, "frequency": 2, "monetary": 21577.0, "segment": "Needs Attention"}, {"recency": 643, "frequency": 2, "monetary": 6586.0, "segment": "Needs Attention"}, {"recency": 14, "frequency": 8, "monetary": 47003.0, "segment": "Needs Attention"}, {"recency": 565, "frequency": 2, "monetary": 11210.0, "segment": "Needs Attention"}, {"recency": 690, "frequency": 2, "monetary": 32192.0, "segment": "Needs Attention"}, {"recency": 768, "frequency": 3, "monetary": 33484.5, "segment": "Needs Attention"}, {"recency": 633, "frequency": 1, "monetary": 7352.0, "segment": "Needs Attention"}, {"recency": 168, "frequency": 2, "monetary": 57172.5, "segment": "Needs Attention"}, {"recency": 457, "frequency": 2, "monetary": 70731.5, "segment": "Needs Attention"}, {"recency": 198, "frequency": 2, "monetary": 40468.0, "segment": "Needs Attention"}, {"recency": 6, "frequency": 8, "monetary": 61923.0, "segment": "Needs Attention"}, {"recency": 618, "frequency": 2, "monetary": 18075.0, "segment": "Needs Attention"}, {"recency": 376, "frequency": 5, "monetary": 97976.5, "segment": "Needs Attention"}, {"recency": 135, "frequency": 4, "monetary": 215543.0, "segment": "Needs Attention"}, {"recency": 416, "frequency": 1, "monetary": 15060.0, "segment": "Needs Attention"}, {"recency": 13, "frequency": 2, "monetary": 56161.0, "segment": "New / Promising"}, {"recency": 118, "frequency": 5, "monetary": 259588.0, "segment": "New / Promising"}, {"recency": 81, "frequency": 3, "monetary": 190423.5, "segment": "New / Promising"}, {"recency": 54, "frequency": 3, "monetary": 54850.0, "segment": "New / Promising"}, {"recency": 2, "frequency": 1, "monetary": 9185.5, "segment": "New / Promising"}, {"recency": 70, "frequency": 3, "monetary": 21042.5, "segment": "New / Promising"}, {"recency": 61, "frequency": 2, "monetary": 48497.5, "segment": "New / Promising"}, {"recency": 65, "frequency": 4, "monetary": 88782.5, "segment": "New / Promising"}, {"recency": 65, "frequency": 2, "monetary": 90158.5, "segment": "New / Promising"}, {"recency": 106, "frequency": 3, "monetary": 16515.5, "segment": "New / Promising"}, {"recency": 105, "frequency": 4, "monetary": 121770.5, "segment": "New / Promising"}, {"recency": 18, "frequency": 4, "monetary": 105772.0, "segment": "New / Promising"}, {"recency": 37, "frequency": 2, "monetary": 22008.0, "segment": "New / Promising"}, {"recency": 123, "frequency": 4, "monetary": 189992.5, "segment": "New / Promising"}, {"recency": 77, "frequency": 3, "monetary": 60258.0, "segment": "New / Promising"}, {"recency": 97, "frequency": 5, "monetary": 75761.0, "segment": "New / Promising"}, {"recency": 100, "frequency": 2, "monetary": 12081.5, "segment": "New / Promising"}, {"recency": 3, "frequency": 2, "monetary": 11220.0, "segment": "New / Promising"}, {"recency": 99, "frequency": 4, "monetary": 14445.0, "segment": "New / Promising"}, {"recency": 52, "frequency": 3, "monetary": 125952.5, "segment": "New / Promising"}, {"recency": 63, "frequency": 4, "monetary": 133525.5, "segment": "New / Promising"}, {"recency": 10, "frequency": 4, "monetary": 79725.0, "segment": "New / Promising"}, {"recency": 37, "frequency": 3, "monetary": 53452.0, "segment": "New / Promising"}, {"recency": 40, "frequency": 2, "monetary": 16631.0, "segment": "New / Promising"}, {"recency": 66, "frequency": 5, "monetary": 46681.5, "segment": "New / Promising"}, {"recency": 25, "frequency": 4, "monetary": 116442.0, "segment": "New / Promising"}, {"recency": 35, "frequency": 5, "monetary": 24440.5, "segment": "New / Promising"}, {"recency": 108, "frequency": 3, "monetary": 135086.5, "segment": "New / Promising"}, {"recency": 95, "frequency": 3, "monetary": 204054.5, "segment": "New / Promising"}, {"recency": 87, "frequency": 3, "monetary": 114006.0, "segment": "New / Promising"}, {"recency": 106, "frequency": 2, "monetary": 82414.5, "segment": "New / Promising"}, {"recency": 61, "frequency": 4, "monetary": 61634.5, "segment": "New / Promising"}, {"recency": 49, "frequency": 2, "monetary": 115526.0, "segment": "New / Promising"}, {"recency": 86, "frequency": 3, "monetary": 65215.0, "segment": "New / Promising"}, {"recency": 101, "frequency": 4, "monetary": 168478.5, "segment": "New / Promising"}, {"recency": 46, "frequency": 4, "monetary": 189147.5, "segment": "New / Promising"}, {"recency": 102, "frequency": 5, "monetary": 265939.5, "segment": "New / Promising"}, {"recency": 42, "frequency": 3, "monetary": 63805.0, "segment": "New / Promising"}, {"recency": 83, "frequency": 2, "monetary": 47405.0, "segment": "New / Promising"}, {"recency": 1, "frequency": 4, "monetary": 97354.5, "segment": "New / Promising"}], "cohort_retention": {"cohorts": ["2023-06", "2023-07", "2023-08", "2023-09", "2023-10", "2023-11", "2023-12", "2024-01", "2024-02", "2024-03"], "months": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], "matrix": [[100.0, 14.9, 15.4, 16.0, 24.9, 23.3, 18.4, 16.3, 11.7, 14.6], [100.0, 15.3, 12.4, 23.7, 23.9, 21.5, 19.9, 10.8, 16.7, 22.8], [100.0, 12.8, 16.8, 21.5, 18.5, 17.2, 13.5, 13.1, 16.8, 15.5], [100.0, 21.7, 17.0, 17.8, 16.3, 8.7, 17.4, 16.3, 15.6, 14.9], [100.0, 23.0, 15.4, 15.4, 9.2, 14.7, 14.9, 15.2, 15.7, 16.8], [100.0, 16.0, 11.5, 8.7, 10.4, 11.1, 14.2, 13.5, 16.0, 11.5], [100.0, 11.1, 9.8, 8.9, 9.3, 7.6, 10.7, 12.0, 12.9, 13.3], [100.0, 10.9, 8.6, 13.3, 13.3, 14.1, 11.7, 13.3, 12.5, 18.0], [100.0, 10.7, 9.7, 13.6, 7.8, 10.7, 9.7, 5.8, 14.6, 16.5], [100.0, 8.1, 9.7, 9.7, 12.1, 9.7, 5.6, 29.0, 20.2, 11.3]], "cohort_sizes": [369, 372, 297, 276, 382, 288, 225, 128, 103, 124]}, "recent_orders": [{"order_id": "ORD0019530", "city": "Chandigarh", "category": "Furniture", "amount": 17649.0, "channel": "Mobile App"}, {"order_id": "ORD0004382", "city": "Lucknow", "category": "Baby & Toys", "amount": 5580.0, "channel": "Website"}, {"order_id": "ORD0009795", "city": "Amritsar", "category": "Beauty & Personal Care", "amount": 5355.0, "channel": "Website"}, {"order_id": "ORD0009795", "city": "Amritsar", "category": "Baby & Toys", "amount": 2945.0, "channel": "Website"}, {"order_id": "ORD0023871", "city": "Ahmedabad", "category": "Baby & Toys", "amount": 5692.5, "channel": "Mobile App"}, {"order_id": "ORD0024689", "city": "Chandigarh", "category": "Baby & Toys", "amount": 3540.0, "channel": "Mobile App"}, {"order_id": "ORD0024689", "city": "Chandigarh", "category": "Electronics", "amount": 38063.0, "channel": "Mobile App"}, {"order_id": "ORD0009577", "city": "Bengaluru", "category": "Mobile & Accessories", "amount": 1360.0, "channel": "Website"}, {"order_id": "ORD0009577", "city": "Bengaluru", "category": "Baby & Toys", "amount": 2368.0, "channel": "Website"}, {"order_id": "ORD0007250", "city": "Hyderabad", "category": "Home & Kitchen", "amount": 18702.0, "channel": "Website"}, {"order_id": "ORD0004382", "city": "Lucknow", "category": "Books & Stationery", "amount": 580.0, "channel": "Website"}, {"order_id": "ORD0023871", "city": "Ahmedabad", "category": "Furniture", "amount": 18378.0, "channel": "Mobile App"}, {"order_id": "ORD0002061", "city": "Pune", "category": "Sports & Fitness", "amount": 8622.0, "channel": "Marketplace"}, {"order_id": "ORD0004382", "city": "Lucknow", "category": "Home & Kitchen", "amount": 17663.0, "channel": "Website"}, {"order_id": "ORD0004382", "city": "Lucknow", "category": "Mobile & Accessories", "amount": 1120.0, "channel": "Website"}, {"order_id": "ORD0007230", "city": "Hyderabad", "category": "Sports & Fitness", "amount": 3832.0, "channel": "Mobile App"}, {"order_id": "ORD0007230", "city": "Hyderabad", "category": "Baby & Toys", "amount": 2325.0, "channel": "Mobile App"}, {"order_id": "ORD0009577", "city": "Bengaluru", "category": "Books & Stationery", "amount": 324.0, "channel": "Website"}, {"order_id": "ORD0013824", "city": "Mysuru", "category": "Mobile & Accessories", "amount": 612.0, "channel": "Mobile App"}, {"order_id": "ORD0028676", "city": "Delhi", "category": "Fashion & Apparel", "amount": 2560.0, "channel": "Marketplace"}, {"order_id": "ORD0001461", "city": "Pune", "category": "Furniture", "amount": 45000.0, "channel": "Mobile App"}, {"order_id": "ORD0027945", "city": "Chennai", "category": "Sports & Fitness", "amount": 11450.0, "channel": "Mobile App"}, {"order_id": "ORD0026225", "city": "Bengaluru", "category": "Furniture", "amount": 30172.0, "channel": "Website"}, {"order_id": "ORD0019400", "city": "Jaipur", "category": "Home & Kitchen", "amount": 4310.0, "channel": "Social Commerce"}, {"order_id": "ORD0012430", "city": "Guwahati", "category": "Beauty & Personal Care", "amount": 1310.0, "channel": "Social Commerce"}, {"order_id": "ORD0019547", "city": "Delhi", "category": "Books & Stationery", "amount": 750.0, "channel": "Mobile App"}, {"order_id": "ORD0008961", "city": "Kanpur", "category": "Baby & Toys", "amount": 2812.0, "channel": "Mobile App"}, {"order_id": "ORD0010425", "city": "Mumbai", "category": "Electronics", "amount": 178590.0, "channel": "Marketplace"}, {"order_id": "ORD0016290", "city": "Indore", "category": "Fashion & Apparel", "amount": 3762.0, "channel": "Website"}, {"order_id": "ORD0013824", "city": "Mysuru", "category": "Electronics", "amount": 50560.0, "channel": "Mobile App"}, {"order_id": "ORD0016290", "city": "Indore", "category": "Electronics", "amount": 83504.0, "channel": "Website"}, {"order_id": "ORD0009577", "city": "Bengaluru", "category": "Mobile & Accessories", "amount": 1210.0, "channel": "Website"}, {"order_id": "ORD0027179", "city": "Bhubaneswar", "category": "Grocery & Gourmet", "amount": 1292.0, "channel": "Website"}, {"order_id": "ORD0010579", "city": "Mumbai", "category": "Electronics", "amount": 29250.0, "channel": "Mobile App"}, {"order_id": "ORD0010579", "city": "Mumbai", "category": "Grocery & Gourmet", "amount": 1278.0, "channel": "Mobile App"}, {"order_id": "ORD0012994", "city": "Mumbai", "category": "Electronics", "amount": 29250.0, "channel": "Website"}, {"order_id": "ORD0024667", "city": "Delhi", "category": "Baby & Toys", "amount": 3100.0, "channel": "Mobile App"}, {"order_id": "ORD0021616", "city": "Unknown", "category": "Fashion & Apparel", "amount": 3375.0, "channel": "Website"}, {"order_id": "ORD0021616", "city": "Unknown", "category": "Sports & Fitness", "amount": 4790.0, "channel": "Website"}, {"order_id": "ORD0000612", "city": "Nagpur", "category": "Sports & Fitness", "amount": 14220.0, "channel": "Website"}, {"order_id": "ORD0003896", "city": "Mumbai", "category": "Books & Stationery", "amount": 940.0, "channel": "Website"}, {"order_id": "ORD0023742", "city": "Ahmedabad", "category": "Books & Stationery", "amount": 1260.0, "channel": "Mobile App"}, {"order_id": "ORD0008467", "city": "Bengaluru", "category": "Books & Stationery", "amount": 700.0, "channel": "Marketplace"}, {"order_id": "ORD0008467", "city": "Bengaluru", "category": "Baby & Toys", "amount": 2635.0, "channel": "Marketplace"}, {"order_id": "ORD0008467", "city": "Bengaluru", "category": "Fashion & Apparel", "amount": 2184.5, "channel": "Marketplace"}, {"order_id": "ORD0023742", "city": "Ahmedabad", "category": "Home & Kitchen", "amount": 5420.0, "channel": "Mobile App"}, {"order_id": "ORD0023742", "city": "Ahmedabad", "category": "Mobile & Accessories", "amount": 4080.0, "channel": "Mobile App"}, {"order_id": "ORD0010579", "city": "Mumbai", "category": "Grocery & Gourmet", "amount": 782.0, "channel": "Mobile App"}, {"order_id": "ORD0024667", "city": "Delhi", "category": "Fashion & Apparel", "amount": 3468.0, "channel": "Mobile App"}, {"order_id": "ORD0024667", "city": "Delhi", "category": "Electronics", "amount": 39890.5, "channel": "Mobile App"}, {"order_id": "ORD0011535", "city": "Chandigarh", "category": "Electronics", "amount": 23292.0, "channel": "Website"}, {"order_id": "ORD0027179", "city": "Bhubaneswar", "category": "Sports & Fitness", "amount": 6108.5, "channel": "Website"}, {"order_id": "ORD0018979", "city": "Bengaluru", "category": "Grocery & Gourmet", "amount": 664.0, "channel": "Mobile App"}, {"order_id": "ORD0027179", "city": "Bhubaneswar", "category": "Beauty & Personal Care", "amount": 1785.0, "channel": "Website"}, {"order_id": "ORD0021528", "city": "Lucknow", "category": "Books & Stationery", "amount": 741.0, "channel": "Website"}, {"order_id": "ORD0027049", "city": "Chennai", "category": "Grocery & Gourmet", "amount": 598.5, "channel": "Website"}, {"order_id": "ORD0025323", "city": "Mumbai", "category": "Electronics", "amount": 45504.0, "channel": "Mobile App"}, {"order_id": "ORD0020881", "city": "Bengaluru", "category": "Sports & Fitness", "amount": 10836.0, "channel": "Website"}, {"order_id": "ORD0020881", "city": "Bengaluru", "category": "Electronics", "amount": 93860.0, "channel": "Website"}, {"order_id": "ORD0028728", "city": "Delhi", "category": "Fashion & Apparel", "amount": 2270.0, "channel": "Website"}], "meta": {"company": "NovaCart", "currency": "\u20b9", "date_range": "2023-06-01 to 2026-06-29", "generated_for": "Retail & E-Commerce Analytics Portfolio Project"}};
+
+// ---------- helpers ----------
+function fmtINR(n, decimals=1){
+  const sign = n < 0 ? '-' : '';
+  n = Math.abs(n);
+  if(n >= 1e7) return sign + '\u20b9' + (n/1e7).toFixed(decimals) + 'Cr';
+  if(n >= 1e5) return sign + '\u20b9' + (n/1e5).toFixed(decimals) + 'L';
+  if(n >= 1e3) return sign + '\u20b9' + (n/1e3).toFixed(decimals) + 'K';
+  return sign + '\u20b9' + n.toFixed(0);
+}
+function fmtInt(n){ return Number(n).toLocaleString('en-IN'); }
+function fmtPct(n){ return n.toFixed(1) + '%'; }
+
+function animateValue(el, from, to, duration, formatter){
+  const start = performance.now();
+  function tick(now){
+    const p = Math.min(1, (now-start)/duration);
+    const eased = 1 - Math.pow(1-p, 3);
+    const val = from + (to-from)*eased;
+    el.textContent = formatter(val);
+    if(p < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
+const CHANNELS = ["All","Website","Mobile App","Marketplace","Social Commerce"];
+const PALETTE = { gold:'#E8A33D', jade:'#2FBF9F', coral:'#E5604C', peri:'#7C93FF', muted:'#8993AC' };
+if(typeof Chart !== 'undefined'){
+  Chart.defaults.font.family = "'Inter', sans-serif";
+  Chart.defaults.color = '#8993AC';
+  Chart.defaults.borderColor = 'rgba(255,255,255,0.06)';
+}
+
+let state = { channel: 'All' };
+let charts = {};
+
+// ---------- ticker ----------
+function buildTicker(){
+  const items = DATA.recent_orders.map(o => `
+    <div class="ticker-item"><span class="dot"></span><b>${o.order_id}</b> · ${o.city} · ${o.category} · ${fmtINR(o.amount,2)} · ${o.channel}</div>
+  `).join('');
+  document.getElementById('tickerTrack').innerHTML = items + items; // duplicate for seamless loop
+}
+
+// ---------- pills ----------
+function buildPills(){
+  const wrap = document.getElementById('channelPills');
+  wrap.innerHTML = CHANNELS.map(c => `<div class="pill ${c==='All'?'active':''}" data-channel="${c}">${c}</div>`).join('');
+  wrap.querySelectorAll('.pill').forEach(p => {
+    p.addEventListener('click', () => setChannel(p.dataset.channel));
+  });
+}
+
+// ---------- KPIs ----------
+const KPI_DEFS = [
+  { key:'revenue', label:'Total Revenue', fmt:v=>fmtINR(v,2) },
+  { key:'profit', label:'Total Profit', fmt:v=>fmtINR(v,2), subKey:'margin_pct', subFmt:v=>`${fmtPct(v)} margin` },
+  { key:'orders', label:'Total Orders', fmt:v=>fmtInt(Math.round(v)) },
+  { key:'aov', label:'Avg Order Value', fmt:v=>'\u20b9'+fmtInt(Math.round(v)) },
+  { key:'repeat_rate_pct', label:'Repeat Customer Rate', fmt:v=>fmtPct(v), subKey:'return_rate_pct', subFmt:v=>`${fmtPct(v)} return rate` },
+];
+let kpiPrev = {};
+function buildKPIGrid(){
+  const grid = document.getElementById('kpiGrid');
+  grid.innerHTML = KPI_DEFS.map((d,i)=>`
+    <div class="kpi-card" style="animation-delay:${i*0.07+0.1}s">
+      <div class="label"><span>${d.label}</span></div>
+      <div class="value" id="kpi-${d.key}">0</div>
+      ${d.subKey ? `<div class="sub" id="kpi-${d.key}-sub"></div>` : ''}
+    </div>
+  `).join('');
+}
+function updateKPIs(kpis){
+  KPI_DEFS.forEach(d=>{
+    const el = document.getElementById(`kpi-${d.key}`);
+    const prev = kpiPrev[d.key] ?? 0;
+    animateValue(el, prev, kpis[d.key], 900, d.fmt);
+    kpiPrev[d.key] = kpis[d.key];
+    if(d.subKey){
+      const subEl = document.getElementById(`kpi-${d.key}-sub`);
+      if(subEl) subEl.textContent = d.subFmt(kpis[d.subKey]);
+    }
+  });
+}
+
+// ---------- Trend chart ----------
+function buildTrendChart(trend){
+  const ctx = document.getElementById('chart-trend');
+  charts.trend = new Chart(ctx, {
+    type:'line',
+    data:{
+      labels: trend.map(t=>t.month),
+      datasets:[
+        { label:'Revenue', data:trend.map(t=>t.revenue), borderColor:PALETTE.gold, backgroundColor:'rgba(232,163,61,.12)', fill:true, tension:.35, pointRadius:0, borderWidth:2.4 },
+        { label:'Profit', data:trend.map(t=>t.profit), borderColor:PALETTE.jade, backgroundColor:'rgba(47,191,159,.10)', fill:true, tension:.35, pointRadius:0, borderWidth:2.2 },
+      ]
+    },
+    options:{
+      responsive:true,
+      interaction:{ mode:'index', intersect:false },
+      plugins:{ legend:{ labels:{ usePointStyle:true, boxWidth:8 } },
+        tooltip:{ callbacks:{ label:(c)=> `${c.dataset.label}: ${fmtINR(c.parsed.y,2)}` } } },
+      scales:{
+        x:{ ticks:{ maxRotation:0, autoSkip:true, maxTicksLimit:9 }, grid:{ display:false } },
+        y:{ ticks:{ callback:(v)=>fmtINR(v,0) }, grid:{ color:'rgba(255,255,255,.05)' } }
+      }
+    }
+  });
+}
+function updateTrendChart(trend){
+  charts.trend.data.labels = trend.map(t=>t.month);
+  charts.trend.data.datasets[0].data = trend.map(t=>t.revenue);
+  charts.trend.data.datasets[1].data = trend.map(t=>t.profit);
+  charts.trend.update();
+}
+
+// ---------- Channel mix donut ----------
+function buildMixChart(){
+  const mix = DATA.channel_mix;
+  const ctx = document.getElementById('chart-mix');
+  charts.mix = new Chart(ctx, {
+    type:'doughnut',
+    data:{
+      labels: mix.map(m=>`${m.channel} (${m.share_pct.toFixed(0)}%)`),
+      datasets:[{ data: mix.map(m=>m.revenue), backgroundColor:[PALETTE.gold, PALETTE.jade, PALETTE.peri, PALETTE.coral], borderColor:'#121B2E', borderWidth:3, offset:0, hoverOffset:10 }]
+    },
+    options:{
+      responsive:true, cutout:'62%',
+      plugins:{ legend:{ position:'bottom', labels:{ usePointStyle:true, boxWidth:8, padding:14 } },
+        tooltip:{ callbacks:{ label:(c)=> ` ${fmtINR(c.parsed,2)}` } } }
+    }
+  });
+}
+function highlightChannelInDonut(channel){
+  const mix = DATA.channel_mix;
+  charts.mix.data.datasets[0].offset = mix.map(m => (channel!=='All' && m.channel===channel) ? 18 : 0);
+  charts.mix.update();
+}
+
+// ---------- Top products ----------
+function buildProductsChart(products){
+  const ctx = document.getElementById('chart-products');
+  charts.products = new Chart(ctx, {
+    type:'bar',
+    data:{ labels: products.map(p=>p.name), datasets:[{ label:'Revenue', data: products.map(p=>p.revenue), backgroundColor:PALETTE.peri, borderRadius:5, maxBarThickness:22 }] },
+    options:{
+      indexAxis:'y', responsive:true,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:(c)=>fmtINR(c.parsed.x,2) } } },
+      scales:{ x:{ ticks:{ callback:(v)=>fmtINR(v,0) }, grid:{ color:'rgba(255,255,255,.05)' } }, y:{ grid:{display:false}, ticks:{ font:{size:10.5} } } }
+    }
+  });
+}
+function updateProductsChart(products){
+  charts.products.data.labels = products.map(p=>p.name);
+  charts.products.data.datasets[0].data = products.map(p=>p.revenue);
+  charts.products.update();
+}
+
+// ---------- Category performance ----------
+function buildCategoryChart(cats){
+  const ctx = document.getElementById('chart-category');
+  charts.category = new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels: cats.map(c=>c.category),
+      datasets:[
+        { label:'Revenue', data:cats.map(c=>c.revenue), backgroundColor:PALETTE.gold, borderRadius:4, maxBarThickness:26 },
+        { label:'Profit', data:cats.map(c=>c.profit), backgroundColor:PALETTE.jade, borderRadius:4, maxBarThickness:26 },
+      ]
+    },
+    options:{
+      responsive:true,
+      plugins:{ legend:{ labels:{ usePointStyle:true, boxWidth:8 } }, tooltip:{ callbacks:{ label:(c)=>`${c.dataset.label}: ${fmtINR(c.parsed.y,2)}` } } },
+      scales:{ x:{ ticks:{ font:{size:10}, maxRotation:28, minRotation:0 }, grid:{display:false} }, y:{ ticks:{ callback:(v)=>fmtINR(v,0) }, grid:{ color:'rgba(255,255,255,.05)' } } }
+    }
+  });
+}
+function updateCategoryChart(cats){
+  charts.category.data.labels = cats.map(c=>c.category);
+  charts.category.data.datasets[0].data = cats.map(c=>c.revenue);
+  charts.category.data.datasets[1].data = cats.map(c=>c.profit);
+  charts.category.update();
+}
+
+// ---------- RFM bubble ----------
+const SEG_COLORS = { 'Champions':PALETTE.gold, 'Loyal Customers':PALETTE.jade, 'New / Promising':PALETTE.peri, 'At Risk':PALETTE.coral, 'Needs Attention':PALETTE.muted };
+function buildRfmChart(){
+  const segs = [...new Set(DATA.rfm_scatter.map(p=>p.segment))];
+  const datasets = segs.map(seg => ({
+    label: seg,
+    data: DATA.rfm_scatter.filter(p=>p.segment===seg).map(p=>({ x:p.recency, y:p.frequency, r: Math.max(4, Math.sqrt(p.monetary)/45) })),
+    backgroundColor: (SEG_COLORS[seg]||PALETTE.muted) + 'CC',
+    borderColor: SEG_COLORS[seg]||PALETTE.muted,
+  }));
+  const ctx = document.getElementById('chart-rfm');
+  charts.rfm = new Chart(ctx, {
+    type:'bubble',
+    data:{ datasets },
+    options:{
+      responsive:true,
+      plugins:{ legend:{ position:'bottom', labels:{ usePointStyle:true, boxWidth:8, padding:12, font:{size:10.5} } },
+        tooltip:{ callbacks:{ label:(c)=>`${c.dataset.label} — recency ${c.raw.x}d, freq ${c.raw.y}` } } },
+      scales:{
+        x:{ title:{ display:true, text:'Recency (days since last order) →  more recent', font:{size:10.5} }, reverse:true, grid:{ color:'rgba(255,255,255,.05)' } },
+        y:{ title:{ display:true, text:'Frequency (orders)', font:{size:10.5} }, grid:{ color:'rgba(255,255,255,.05)' } }
+      }
+    }
+  });
+}
+
+// ---------- Region chart ----------
+function buildRegionChart(regions){
+  const ctx = document.getElementById('chart-region');
+  charts.region = new Chart(ctx, {
+    type:'bar',
+    data:{ labels: regions.map(r=>r.region), datasets:[{ label:'Revenue', data:regions.map(r=>r.revenue), backgroundColor:PALETTE.gold, borderRadius:5, maxBarThickness:30 }] },
+    options:{
+      indexAxis:'y', responsive:true,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:(c)=>fmtINR(c.parsed.x,2) } } },
+      scales:{ x:{ ticks:{ callback:(v)=>fmtINR(v,0) }, grid:{ color:'rgba(255,255,255,.05)' } }, y:{ grid:{display:false} } }
+    }
+  });
+}
+function updateRegionChart(regions){
+  charts.region.data.labels = regions.map(r=>r.region);
+  charts.region.data.datasets[0].data = regions.map(r=>r.revenue);
+  charts.region.update();
+}
+
+// ---------- Cohort heatmap ----------
+function buildCohortGrid(){
+  const c = DATA.cohort_retention;
+  const grid = document.getElementById('cohortGrid');
+  const nCols = c.months.length + 1;
+  grid.style.gridTemplateColumns = `120px repeat(${c.months.length}, 1fr)`;
+  let html = `<div></div>` + c.months.map(m=>`<div class="cohort-head">M+${m}</div>`).join('');
+  c.cohorts.forEach((cohort, ri) => {
+    html += `<div class="cohort-label">${cohort} <span style="color:#57648A;margin-left:5px;">(${c.cohort_sizes[ri]})</span></div>`;
+    c.matrix[ri].forEach((v, ci) => {
+      const delay = (ri*c.months.length + ci) * 0.012;
+      if(v === null){ html += `<div></div>`; return; }
+      const t = Math.min(1, v/100);
+      // interpolate panel-raised -> jade
+      const r = Math.round(24 + t*(47-24)); const g = Math.round(37 + t*(191-37)); const b = Math.round(68 + t*(159-68));
+      html += `<div class="cohort-cell" style="background:rgb(${r},${g},${b}); animation-delay:${delay}s" title="${cohort} · month ${ci}: ${v}% retained">${v.toFixed(0)}</div>`;
+    });
+  });
+  grid.innerHTML = html;
+}
+
+// ---------- channel switching ----------
+function setChannel(channel){
+  if(!charts.trend) return; // charts never initialized (e.g. Chart.js failed to load)
+  state.channel = channel;
+  document.querySelectorAll('.pill').forEach(p => p.classList.toggle('active', p.dataset.channel===channel));
+  const d = DATA.channels[channel];
+  updateKPIs(d.kpis);
+  updateTrendChart(d.monthly_trend);
+  updateProductsChart(d.top_products);
+  updateCategoryChart(d.category_performance);
+  updateRegionChart(d.region_performance);
+  highlightChannelInDonut(channel);
+}
+
+// ---------- scroll reveal ----------
+function initScrollReveal(){
+  const obs = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('in-view'); obs.unobserve(e.target); } });
+  }, { threshold:.15 });
+  document.querySelectorAll('.panel').forEach(p=>obs.observe(p));
+}
+
+// ---------- init ----------
+function init(){
+  document.getElementById('dateRangeLabel').textContent = `Data: ${DATA.meta.date_range}`;
+  buildTicker();
+  buildPills();
+  buildKPIGrid();
+  const all = DATA.channels['All'];
+  updateKPIs(all.kpis);
+  buildCohortGrid();
+  initScrollReveal();
+
+  if(typeof Chart === 'undefined'){
+    document.querySelectorAll('canvas').forEach(c => {
+      const msg = document.createElement('div');
+      msg.style.cssText = 'color:#8993AC;font-family:monospace;font-size:12px;padding:40px 10px;text-align:center;';
+      msg.textContent = 'Chart library failed to load (check your internet connection or ad-blocker). The rest of the dashboard is unaffected.';
+      c.replaceWith(msg);
+    });
+    document.querySelectorAll('.pill').forEach(p => p.style.pointerEvents = 'none');
+    return;
+  }
+  buildTrendChart(all.monthly_trend);
+  buildMixChart();
+  buildProductsChart(all.top_products);
+  buildCategoryChart(all.category_performance);
+  buildRfmChart();
+  buildRegionChart(all.region_performance);
+}
+init();
+</script>
+</body>
+</html>
